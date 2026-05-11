@@ -37,7 +37,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_WS_URL: ${{ vars.WS_URL || 'wss://word-cloud.onrender.com' }}
+          VITE_WS_URL: ${{ vars.WS_URL || 'wss://word-cloud-2zah.onrender.com' }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
