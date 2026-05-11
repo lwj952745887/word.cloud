@@ -16,4 +16,12 @@ const socket = io(WS_URL, {
   reconnectionDelay: 1000
 });
 
+// Log connection events for debugging
+socket.on('connect', () => {
+  console.log('Socket connected:', socket.id);
+});
+socket.on('connect_error', (err) => {
+  console.error('Socket connection error:', err.message);
+});
+
 export default socket;

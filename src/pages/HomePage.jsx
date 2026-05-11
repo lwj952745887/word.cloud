@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import socket from '../socket';
 import './HomePage.css';
@@ -9,26 +9,61 @@ function HomePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(socket.connected);
+  const [connFailed, setConnFailed] = useState(false);
+  const timeoutRef = useRef(null);
 
   useEffect(() => {
-    const onConnect = () => setConnected(true);
+    const onConnect = () => {
+      setConnected(true);
+      setConnFailed(false);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
     const onDisconnect = () => setConnected(false);
+    const onConnError = () => setConnFailed(true);
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    socket.on('connect_error', onConnError);
+
+    // Show timeout message after 15 seconds of no connection
+    if (!socket.connected) {
+      timeoutRef.current = setTimeout(() => {
+        setConnFailed(true);
+        setError('⚠ 无法连接到服务器。请确认后端服务已部署并运行。');
+      }, 15000);
+    }
+
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
+      socket.off('connect_error', onConnError);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
+  const reconnect = () => {
+    setError('');
+    setConnFailed(false);
+    socket.connect();
+    timeoutRef.current = setTimeout(() => {
+      setConnFailed(true);
+      setError('⚠ 无法连接到服务器。请确认后端服务已部署并运行。');
+    }, 15000);
+  };
+
   const createRoom = () => {
-    if (!connected) {
+    if (!socket.connected) {
       setError('正在连接服务器，请稍候...');
       return;
     }
     setLoading(true);
     setError('');
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setError('请求超时，服务器无响应。请稍后重试。');
+    }, 10000);
     socket.emit('create-room', ({ roomId }) => {
+      clearTimeout(timeout);
       setLoading(false);
       navigate(`/host`, { state: { roomId } });
     });
@@ -40,13 +75,18 @@ function HomePage() {
       setError('请输入房间号');
       return;
     }
-    if (!connected) {
+    if (!socket.connected) {
       setError('正在连接服务器，请稍候...');
       return;
     }
     setLoading(true);
     setError('');
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setError('请求超时，服务器无响应。请稍后重试。');
+    }, 10000);
     socket.emit('join-room', { roomId: id }, (res) => {
+      clearTimeout(timeout);
       setLoading(false);
       if (res && res.error) {
         setError(res.error);
@@ -74,9 +114,16 @@ function HomePage() {
         <h1 className="home-title">Word Cloud</h1>
         <p className="home-desc">实时互动词云工具 — 让每一个声音都被看见</p>
 
-        <div className={`status-bar ${connected ? 'status-connected' : 'status-connecting'}`}>
+        <div className={`status-bar ${connected ? 'status-connected' : connFailed ? 'status-error' : 'status-connecting'}`}>
           <span className="status-dot"></span>
-          <span>{connected ? '已连接服务器' : '正在连接服务器...'}</span>
+          <span>
+            {connected ? '已连接服务器' : connFailed ? '连接失败' : '正在连接服务器...'}
+          </span>
+          {connFailed && (
+            <button className="btn-reconnect" onClick={reconnect}>
+              重新连接
+            </button>
+          )}
         </div>
 
         <div className="home-cards">
