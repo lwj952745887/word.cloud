@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import socket from '../socket';
 import './HomePage.css';
@@ -7,9 +7,29 @@ function HomePage() {
   const navigate = useNavigate();
   const [roomId, setRoomId] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [connected, setConnected] = useState(socket.connected);
+
+  useEffect(() => {
+    const onConnect = () => setConnected(true);
+    const onDisconnect = () => setConnected(false);
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+    };
+  }, []);
 
   const createRoom = () => {
+    if (!connected) {
+      setError('正在连接服务器，请稍候...');
+      return;
+    }
+    setLoading(true);
+    setError('');
     socket.emit('create-room', ({ roomId }) => {
+      setLoading(false);
       navigate(`/host`, { state: { roomId } });
     });
   };
@@ -20,8 +40,15 @@ function HomePage() {
       setError('请输入房间号');
       return;
     }
+    if (!connected) {
+      setError('正在连接服务器，请稍候...');
+      return;
+    }
+    setLoading(true);
+    setError('');
     socket.emit('join-room', { roomId: id }, (res) => {
-      if (res.error) {
+      setLoading(false);
+      if (res && res.error) {
         setError(res.error);
       } else {
         navigate(`/audience/${id}`);
@@ -47,10 +74,15 @@ function HomePage() {
         <h1 className="home-title">Word Cloud</h1>
         <p className="home-desc">实时互动词云工具 — 让每一个声音都被看见</p>
 
+        <div className={`status-bar ${connected ? 'status-connected' : 'status-connecting'}`}>
+          <span className="status-dot"></span>
+          <span>{connected ? '已连接服务器' : '正在连接服务器...'}</span>
+        </div>
+
         <div className="home-cards">
-          <div className="home-card glass-card" onClick={createRoom}>
+          <div className={`home-card glass-card ${loading ? 'card-disabled' : ''}`} onClick={createRoom}>
             <div className="card-icon">+</div>
-            <h3>创建房间</h3>
+            <h3>{loading ? '连接中...' : '创建房间'}</h3>
             <p>作为主持人发起一个话题，开始收集观众的反馈</p>
           </div>
 
@@ -79,7 +111,9 @@ function HomePage() {
               onKeyDown={(e) => e.key === 'Enter' && joinRoom()}
               maxLength={6}
             />
-            <button className="btn btn-primary" onClick={joinRoom}>加入</button>
+            <button className={`btn btn-primary ${loading ? 'btn-loading' : ''}`} onClick={joinRoom} disabled={loading}>
+              {loading ? '连接中...' : '加入'}
+            </button>
           </div>
           {error && <p className="join-error">{error}</p>}
         </div>
