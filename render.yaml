@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: word-cloud-server
+    env: node
+    buildCommand: cd server && npm install
+    startCommand: cd server && node index.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+    healthCheckPath: /health
+    autoDeploy: true

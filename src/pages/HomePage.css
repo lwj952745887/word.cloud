@@ -1,0 +1,134 @@
+/* ===== Home Page ===== */
+.home-page {
+  text-align: center;
+}
+
+.home-content {
+  max-width: 800px;
+  width: 100%;
+}
+
+.home-logo {
+  margin-bottom: 16px;
+}
+
+.logo-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: white;
+  box-shadow: 0 8px 24px rgba(0, 212, 255, 0.3);
+}
+
+.home-title {
+  font-size: 3rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.home-desc {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  margin-bottom: 48px;
+}
+
+.home-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.home-card {
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: center;
+  padding: 28px 20px;
+}
+
+.home-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 212, 255, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  background: rgba(0, 212, 255, 0.15);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: var(--accent);
+}
+
+.home-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+
+.home-card p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.join-section {
+  margin-top: 8px;
+  padding: 28px;
+}
+
+.join-section h3 {
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+}
+
+.join-input-row {
+  display: flex;
+  gap: 12px;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.join-input {
+  flex: 1;
+  text-align: center;
+  font-size: 1.2rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.join-error {
+  color: #ff6b81;
+  font-size: 0.85rem;
+  margin-top: 10px;
+}
+
+@media (max-width: 768px) {
+  .home-cards {
+    grid-template-columns: 1fr;
+  }
+  .home-title {
+    font-size: 2rem;
+  }
+  .home-desc {
+    font-size: 0.95rem;
+  }
+  .join-input-row {
+    flex-direction: column;
+  }
+}
