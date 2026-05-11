@@ -1,21 +1,62 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 
 const app = express();
+
+// Global error handler - prevents crashes
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err.message, err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+});
+
+// Log startup info immediately
+const startupMsg = JSON.stringify({
+  event: 'startup',
+  node: process.version,
+  cwd: process.cwd(),
+  dirname: __dirname,
+  port: process.env.PORT || 3001,
+  time: new Date().toISOString()
+});
+console.log('STARTUP:', startupMsg);
+
+app.use(cors());
+
+// Health check - MUST be registered BEFORE any conditional middleware
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    node: process.version
+  });
+});
+
+// Static file serving (only if dist/ exists)
+const distPath = path.join(__dirname, '..', 'dist');
+try {
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+    console.log('DIST: dist folder found, serving static files');
+  } else {
+    console.log('DIST: no dist folder, API-only mode');
+  }
+} catch (e) {
+  console.log('DIST: error checking dist folder:', e.message);
+}
+
+// Create HTTP server and attach Socket.IO
 const server = http.createServer(app);
+const { Server } = require('socket.io');
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
-app.use(cors());
-
-// Health check for Render
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime() });
-});
+console.log('SOCKET: Socket.IO initialized');
 
 // In-memory store for rooms
 const rooms = {};
@@ -120,14 +161,8 @@ io.on('connection', (socket) => {
   });
 });
 
-// Serve static files if dist/ exists (standalone deployment)
-const distPath = path.join(__dirname, '..', 'dist');
-const fs = require('fs');
+// SPA fallback for standalone deployment (if dist/ exists)
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-  console.log('Serving static files from:', distPath);
-
-  // SPA fallback for standalone deployment
   app.get('*', (req, res) => {
     const indexPath = path.join(distPath, 'index.html');
     if (fs.existsSync(indexPath)) {
@@ -141,7 +176,6 @@ if (fs.existsSync(distPath)) {
     }
   });
 } else {
-  console.log('No dist/ found - running in API-only mode for GitHub Pages deployment');
   app.get('/', (req, res) => {
     res.json({
       service: 'word-cloud-server',
@@ -152,6 +186,13 @@ if (fs.existsSync(distPath)) {
 }
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Word.Cloud server running on http://0.0.0.0:${PORT}`);
-});
+try {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log('LISTEN: server running on port ' + PORT);
+  });
+  console.log('READY: all modules loaded, waiting for connections');
+} catch (e) {
+  console.error('FATAL: could not start server:', e.message, e.stack);
+  // Keep process alive for Render health check
+  setInterval(() => console.log('ALIVE: server failed to start, but process alive'), 30000);
+}
