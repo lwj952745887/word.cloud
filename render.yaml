@@ -1,11 +1,6 @@
-services:
-  - type: web
-    name: word-cloud-server
-    env: node
-    buildCommand: npm install
-    startCommand: node server/index.js
-    envVars:
-      - key: NODE_VERSION
-        value: 20
-    healthCheckPath: /health
-    autoDeploy: true
+# ═══════════════════════════════════════════════════════════════════
+# Render Deployment Config (DEPRECATED)
+# ═══════════════════════════════════════════════════════════════════
+# We've migrated to Railway.app for better reliability.
+# See railway.json for the current deployment configuration.
+# ═══════════════════════════════════════════════════════════════════
