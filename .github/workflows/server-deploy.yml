@@ -1,0 +1,104 @@
+# ═══════════════════════════════════════════════════════════════
+# Deploy to Alibaba Cloud Server
+# ═══════════════════════════════════════════════════════════════
+# Builds the frontend and deploys everything to your server.
+# - dist/ (built frontend) → /opt/word-cloud/dist/
+# - server/ (backend code) → /opt/word-cloud/server/
+# - deploy/ (config files) → /opt/word-cloud/deploy/
+#
+# Required GitHub Secrets (add at repo → Settings → Secrets → Actions):
+#   SERVER_IP       - Alibaba Cloud ECS public IP address
+#   SERVER_SSH_KEY  - Private SSH key content (entire key file, including
+#                      -----BEGIN OPENSSH PRIVATE KEY----- lines)
+#   SERVER_USER     - SSH username (default: "root", optional)
+# ═══════════════════════════════════════════════════════════════
+
+name: Deploy to Alibaba Cloud
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-to-server:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SERVER_IP != '' && secrets.SERVER_SSH_KEY != '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Copy deploy configs to server via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER || 'root' }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "deploy/nginx.conf,deploy/ecosystem.config.js"
+          target: "/opt/word-cloud"
+          strip_components: 0
+          overwrite: true
+
+      - name: Copy server code via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER || 'root' }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "package.json,package-lock.json,server/"
+          target: "/opt/word-cloud"
+          strip_components: 0
+          overwrite: true
+
+      - name: Copy frontend build via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER || 'root' }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "dist/"
+          target: "/opt/word-cloud"
+          strip_components: 0
+          overwrite: true
+
+      - name: Install deps and restart server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER || 'root' }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            echo "=== Installing dependencies ==="
+            cd /opt/word-cloud
+            npm install --omit=dev 2>&1
+
+            echo ""
+            echo "=== Configuring Nginx ==="
+            cp /opt/word-cloud/deploy/nginx.conf /etc/nginx/sites-available/word-cloud 2>/dev/null || true
+            ln -sf /etc/nginx/sites-available/word-cloud /etc/nginx/sites-enabled/
+            nginx -t && systemctl reload nginx
+            echo "Nginx: OK"
+
+            echo ""
+            echo "=== Starting / Restarting PM2 ==="
+            pm2 delete word-cloud-server 2>/dev/null || true
+            pm2 start /opt/word-cloud/deploy/ecosystem.config.js 2>&1
+            pm2 save 2>&1
+
+            echo ""
+            echo "=== Deployment Complete ==="
+            echo "Health check: http://$(curl -s ifconfig.me)/health"

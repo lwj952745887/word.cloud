@@ -48,12 +48,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Trigger Render redeployment
-        if: ${{ secrets.RENDER_DEPLOY_HOOK != '' }}
-        run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" \
-            -H "Content-Type: application/json" \
-            --connect-timeout 30 \
-            --max-time 120
-        shell: bash
