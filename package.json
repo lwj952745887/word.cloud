@@ -5,19 +5,22 @@
   "homepage": "https://<YOUR_USERNAME>.github.io/word.cloud",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "cd server && node index.js",
+    "dev:server": "node server/index.js",
     "dev:client": "vite",
     "build": "vite build && node scripts/postbuild.mjs",
-    "start": "npm run build && cd server && node index.js",
-    "dev:start": "cd server && node index.js",
-    "setup": "npm install && cd server && npm install"
+    "start": "npm run build && node server/index.js",
+    "dev:start": "node server/index.js",
+    "setup": "npm install"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
-    "socket.io-client": "^4.8.0",
-    "react-wordcloud": "^1.2.7"
+    "react-wordcloud": "^1.2.7",
+    "socket.io": "^4.8.0",
+    "socket.io-client": "^4.8.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
