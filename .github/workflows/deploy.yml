@@ -36,8 +36,6 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          VITE_WS_URL: ${{ vars.WS_URL || 'wss://word-cloud-2zah.onrender.com' }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -50,3 +48,12 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Trigger Render redeployment
+        if: ${{ secrets.RENDER_DEPLOY_HOOK != '' }}
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" \
+            -H "Content-Type: application/json" \
+            --connect-timeout 30 \
+            --max-time 120
+        shell: bash
